@@ -1438,6 +1438,20 @@ const CONFIG = {
     })
     .catch(function(err){
       if(err&&err.activation){ say('Почта ещё не подтверждена: найдите письмо от FormSubmit (проверьте «Спам») и нажмите Activate Form, затем отправьте заявку снова.','is-err'); return; }
+      if(err&&!err.detail&&(err instanceof TypeError||/load failed|failed to fetch|network/i.test(err.message||''))){
+        /* запасной путь: обычная форма в скрытый фрейм (без CORS) */
+        try{
+          var fr=document.createElement('iframe'); fr.name='hl_fb'; fr.style.display='none'; document.body.appendChild(fr);
+          var f2=document.createElement('form'); f2.method='POST'; f2.action='https://formsubmit.co/highlightmedia@outlook.com'; f2.target='hl_fb'; f2.style.display='none';
+          var data={_subject:'Новая заявка с сайта HIGHLIGHT',_template:'table',_captcha:'false','Имя':name,'Связь':contact,'Формат':form.service.value||'не указан','Сообщение':form.message.value.trim()||'—'};
+          Object.keys(data).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=data[k];f2.appendChild(i);});
+          document.body.appendChild(f2); f2.submit();
+          try{localStorage.setItem('hl_form_last',String(Date.now()));}catch(_){}
+          form.reset(); say('Заявка отправлена. Если мы не ответим в ближайшее время, напишите на highlightmedia@outlook.com или в Instagram.','is-ok');
+          setTimeout(function(){f2.remove();fr.remove();},15000);
+          return;
+        }catch(_){}
+      }
       var why=(err&&(err.detail||err.message))||'неизвестно';
       say('Не удалось отправить [код: '+why+']. Напишите нам на highlightmedia@outlook.com или в Instagram.','is-err'); })
     .then(function(){ btn.disabled=false; });
